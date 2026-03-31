@@ -1,5 +1,5 @@
-import { stackServerApp } from "@/stack";
-import { getOrProvisionAppUser } from "@/lib/getAppUser";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
@@ -10,13 +10,10 @@ export default async function ProjectMembersPage({
 }: {
   params: { id: string };
 }) {
-  const stackUser = await stackServerApp.getUser({ or: "redirect" });
-  const appUser = await getOrProvisionAppUser(stackUser);
+  const session = await getServerSession(authOptions);
+  if (!session) return null;
 
-  if (appUser.status === "PENDING") redirect("/pending");
-  if (appUser.status === "REJECTED") redirect("/rejected");
-
-  if (!["ADMIN", "MANAGER"].includes(appUser.role)) {
+  if (!["ADMIN", "MANAGER"].includes(session.user.role)) {
     redirect(`/projects/${params.id}`);
   }
 

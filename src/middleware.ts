@@ -1,59 +1,37 @@
-import { stackServerApp } from "./stack";
+import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = [
-  "/handler",
-  "/pending",
-  "/rejected",
-  "/_next",
-  "/favicon.ico",
-];
+export default withAuth(
+  function middleware(req) {
+    const token = req.nextauth.token;
+    const pathname = req.nextUrl.pathname;
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next();
-  }
-
-  const user = await stackServerApp.getUser();
-
-  if (!user) {
-    const signInUrl = new URL("/handler/sign-in", request.url);
-    signInUrl.searchParams.set("after", pathname);
-    return NextResponse.redirect(signInUrl);
-  }
-
-  const meta = (user.clientMetadata ?? {}) as Record<string, string>;
-  const status = meta.status;
-  const role = meta.role;
-
-  // Unprovisioned user — send to pending page where provisioning happens
-  if (!status) {
-    if (pathname !== "/pending") {
-      return NextResponse.redirect(new URL("/pending", request.url));
+    // Redirect PENDING users to the waiting page (except for that page itself)
+    if (token?.status === "PENDING" && pathname !== "/pending") {
+      return NextResponse.redirect(new URL("/pending", req.url));
     }
+
+    // Redirect REJECTED users to the rejected page (except for that page itself)
+    if (token?.status === "REJECTED" && pathname !== "/rejected") {
+      return NextResponse.redirect(new URL("/rejected", req.url));
+    }
+
+    // Protect /admin routes — only ADMIN role allowed
+    if (pathname.startsWith("/admin") && token?.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+
     return NextResponse.next();
+  },
+  {
+    callbacks: {
+      authorized: ({ token }) => !!token,
+    },
   }
-
-  if (status === "PENDING" && pathname !== "/pending") {
-    return NextResponse.redirect(new URL("/pending", request.url));
-  }
-
-  if (status === "REJECTED" && pathname !== "/rejected") {
-    return NextResponse.redirect(new URL("/rejected", request.url));
-  }
-
-  if (pathname.startsWith("/admin") && role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  return NextResponse.next();
-}
+);
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!api/auth|login|signup|_next/static|_next/image|favicon.ico).*)",
   ],
 };

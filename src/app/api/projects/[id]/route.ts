@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAppUser } from "@/lib/getAppUser";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const appUser = await getAppUser();
-  if (!appUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (appUser.role !== "ADMIN") {
+  // Only admins can delete projects
+  if (session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

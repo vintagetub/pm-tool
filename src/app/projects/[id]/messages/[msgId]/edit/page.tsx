@@ -1,5 +1,5 @@
-import { stackServerApp } from "@/stack";
-import { getOrProvisionAppUser } from "@/lib/getAppUser";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import EditMessageClient from "./EditMessageClient";
@@ -9,11 +9,8 @@ export default async function EditMessagePage({
 }: {
   params: { id: string; msgId: string };
 }) {
-  const stackUser = await stackServerApp.getUser({ or: "redirect" });
-  const appUser = await getOrProvisionAppUser(stackUser);
-
-  if (appUser.status === "PENDING") redirect("/pending");
-  if (appUser.status === "REJECTED") redirect("/rejected");
+  const session = await getServerSession(authOptions);
+  if (!session) return null;
 
   const message = await prisma.message.findUnique({
     where: { id: params.msgId },
@@ -21,7 +18,7 @@ export default async function EditMessagePage({
   });
 
   if (!message || message.projectId !== params.id) notFound();
-  if (message.authorId !== appUser.id) redirect(`/projects/${params.id}/messages/${params.msgId}`);
+  if (message.authorId !== session.user.id) redirect(`/projects/${params.id}/messages/${params.msgId}`);
 
   return (
     <EditMessageClient

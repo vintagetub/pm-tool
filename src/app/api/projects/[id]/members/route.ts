@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAppUser } from "@/lib/getAppUser";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/projects/[id]/members — list project members (admin or manager)
@@ -7,9 +8,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const appUser = await getAppUser();
-  if (!appUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!["ADMIN", "MANAGER"].includes(appUser.role)) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!["ADMIN", "MANAGER"].includes(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -29,9 +30,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const appUser = await getAppUser();
-  if (!appUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!["ADMIN", "MANAGER"].includes(appUser.role)) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!["ADMIN", "MANAGER"].includes(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

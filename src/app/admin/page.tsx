@@ -1,7 +1,12 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 
 export default async function AdminOverviewPage() {
+  const session = await getServerSession(authOptions);
+  if (!session) return null;
+
   const [pendingCount, totalUsers, approvedDomains] = await Promise.all([
     prisma.user.count({ where: { status: "PENDING" } }),
     prisma.user.count(),
@@ -19,6 +24,7 @@ export default async function AdminOverviewPage() {
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
 
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <p className="text-3xl font-bold text-yellow-600">{pendingCount}</p>
@@ -50,6 +56,7 @@ export default async function AdminOverviewPage() {
         </div>
       </div>
 
+      {/* Recent pending users */}
       {recentPending.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">

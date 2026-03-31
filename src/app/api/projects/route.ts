@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAppUser } from "@/lib/getAppUser";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
-  const appUser = await getAppUser();
-  if (!appUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!["ADMIN", "MANAGER"].includes(appUser.role)) {
+  // Only admins and managers can create projects
+  if (!["ADMIN", "MANAGER"].includes(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -21,9 +23,10 @@ export async function POST(req: NextRequest) {
         name,
         description: description || null,
         color,
-        createdById: appUser.id,
+        createdById: session.user.id,
+        // Add creator as a member automatically
         members: {
-          create: { userId: appUser.id },
+          create: { userId: session.user.id },
         },
       },
     });

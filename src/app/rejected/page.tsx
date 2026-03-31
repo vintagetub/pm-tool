@@ -1,16 +1,14 @@
-import { stackServerApp } from "@/stack";
-import { getOrProvisionAppUser } from "@/lib/getAppUser";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import RejectedClient from "./RejectedClient";
 
 export default async function RejectedPage() {
-  const stackUser = await stackServerApp.getUser();
-  if (!stackUser) redirect("/handler/sign-in");
+  const session = await getServerSession(authOptions);
 
-  const appUser = await getOrProvisionAppUser(stackUser);
+  if (!session) redirect("/login");
+  if (session.user.status === "APPROVED") redirect("/");
+  if (session.user.status === "PENDING") redirect("/pending");
 
-  if (appUser.status === "APPROVED") redirect("/");
-  if (appUser.status === "PENDING") redirect("/pending");
-
-  return <RejectedClient name={appUser.name} email={appUser.email} />;
+  return <RejectedClient name={session.user.name} email={session.user.email} />;
 }

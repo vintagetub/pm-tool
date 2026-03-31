@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser } from "@stackframe/stack";
+import { signOut } from "next-auth/react";
 
 export default function PendingClient({
   name,
@@ -9,8 +9,6 @@ export default function PendingClient({
   name: string;
   email: string;
 }) {
-  const user = useUser();
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-md text-center">
@@ -30,7 +28,7 @@ export default function PendingClient({
           </p>
         </div>
         <button
-          onClick={() => user?.signOut()}
+          onClick={() => signOut({ callbackUrl: "/login" })}
           className="mt-4 text-sm text-gray-500 hover:text-gray-700 transition-colors"
         >
           Sign out

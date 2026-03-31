@@ -1,18 +1,15 @@
-import { stackServerApp } from "@/stack";
-import { getOrProvisionAppUser } from "@/lib/getAppUser";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import DeleteButton from "@/components/DeleteButton";
 
 export default async function ProjectPage({ params }: { params: { id: string } }) {
-  const stackUser = await stackServerApp.getUser({ or: "redirect" });
-  const appUser = await getOrProvisionAppUser(stackUser);
+  const session = await getServerSession(authOptions);
+  if (!session) return null;
 
-  if (appUser.status === "PENDING") redirect("/pending");
-  if (appUser.status === "REJECTED") redirect("/rejected");
-
-  const isAdminOrManager = ["ADMIN", "MANAGER"].includes(appUser.role);
+  const isAdminOrManager = ["ADMIN", "MANAGER"].includes(session.user.role);
 
   const project = await prisma.project.findUnique({
     where: { id: params.id },
@@ -39,6 +36,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+      {/* Back link */}
       <Link
         href="/"
         className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-6"
@@ -46,6 +44,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         ← All projects
       </Link>
 
+      {/* Project heading */}
       <div className="flex items-center gap-3 mb-8">
         <div
           className="w-3 h-3 rounded-full flex-shrink-0"
@@ -58,7 +57,9 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         <p className="text-gray-600 mb-8 -mt-4">{project.description}</p>
       )}
 
+      {/* Two section cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+        {/* Message Board */}
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-gray-900">Message Board</h2>
@@ -90,6 +91,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
           </Link>
         </div>
 
+        {/* To-Dos */}
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold text-gray-900">To-Dos</h2>
@@ -121,6 +123,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         </div>
       </div>
 
+      {/* Members management link (admin/manager only) */}
       {isAdminOrManager && (
         <div className="bg-white border border-gray-200 rounded-xl p-5 mb-4">
           <div className="flex items-center justify-between">
@@ -138,7 +141,8 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         </div>
       )}
 
-      {appUser.role === "ADMIN" && (
+      {/* Danger zone (admin only) */}
+      {session.user.role === "ADMIN" && (
         <div className="border border-red-100 bg-red-50 rounded-xl p-5">
           <h3 className="text-sm font-semibold text-red-700 mb-1">Danger Zone</h3>
           <p className="text-xs text-red-500 mb-3">

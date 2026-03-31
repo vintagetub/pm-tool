@@ -1,7 +1,7 @@
-import { stackServerApp } from "@/stack";
-import { getOrProvisionAppUser } from "@/lib/getAppUser";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import CommentForm from "@/components/CommentForm";
 import DeleteButton from "@/components/DeleteButton";
@@ -11,11 +11,8 @@ export default async function MessageDetailPage({
 }: {
   params: { id: string; msgId: string };
 }) {
-  const stackUser = await stackServerApp.getUser({ or: "redirect" });
-  const appUser = await getOrProvisionAppUser(stackUser);
-
-  if (appUser.status === "PENDING") redirect("/pending");
-  if (appUser.status === "REJECTED") redirect("/rejected");
+  const session = await getServerSession(authOptions);
+  if (!session) return null;
 
   const message = await prisma.message.findUnique({
     where: { id: params.msgId },
@@ -30,7 +27,7 @@ export default async function MessageDetailPage({
 
   if (!message || message.projectId !== params.id) notFound();
 
-  const isAuthor = message.authorId === appUser.id;
+  const isAuthor = message.authorId === session.user.id;
 
   function getInitials(name: string) {
     return name
@@ -58,6 +55,7 @@ export default async function MessageDetailPage({
         ← Message Board
       </Link>
 
+      {/* Message */}
       <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
         <div className="flex items-start justify-between gap-4 mb-4">
           <h1 className="text-2xl font-bold text-gray-900 leading-tight">{message.title}</h1>
@@ -99,13 +97,14 @@ export default async function MessageDetailPage({
         </div>
       </div>
 
+      {/* Comments */}
       {message.comments.length > 0 && (
         <div className="space-y-4 mb-6">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
             {message.comments.length} {message.comments.length === 1 ? "Reply" : "Replies"}
           </h2>
           {message.comments.map((comment) => {
-            const isCommentAuthor = comment.authorId === appUser.id;
+            const isCommentAuthor = comment.authorId === session.user.id;
             return (
               <div key={comment.id} className="bg-white border border-gray-200 rounded-xl p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -136,6 +135,7 @@ export default async function MessageDetailPage({
         </div>
       )}
 
+      {/* Reply form */}
       <div className="bg-white border border-gray-200 rounded-xl p-5">
         <h3 className="text-sm font-medium text-gray-700 mb-3">Add a reply</h3>
         <CommentForm projectId={params.id} msgId={params.msgId} />

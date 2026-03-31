@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAppUser } from "@/lib/getAppUser";
-import { stackServerApp } from "@/stack";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 // PATCH /api/admin/users/[userId] — update status and/or role (admin only)
@@ -8,12 +8,13 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: { userId: string } }
 ) {
-  const appUser = await getAppUser();
-  if (!appUser || appUser.role !== "ADMIN") {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (params.userId === appUser.id) {
+  // Prevent admins from modifying their own role/status
+  if (params.userId === session.user.id) {
     return NextResponse.json(
       { error: "You cannot modify your own account from the admin panel" },
       { status: 400 }
@@ -41,7 +42,6 @@ export async function PATCH(
     },
     select: {
       id: true,
-      stackAuthId: true,
       name: true,
       email: true,
       role: true,
@@ -49,30 +49,7 @@ export async function PATCH(
     },
   });
 
-  // Sync updated role/status to Stack Auth clientMetadata
-  try {
-    const targetStackUser = await stackServerApp.getUser(updated.stackAuthId);
-    if (targetStackUser) {
-      const currentMeta = (targetStackUser.clientMetadata ?? {}) as Record<string, string>;
-      await targetStackUser.update({
-        clientMetadata: {
-          ...currentMeta,
-          ...(role ? { role } : {}),
-          ...(status ? { status } : {}),
-        },
-      });
-    }
-  } catch {
-    // Non-fatal: clientMetadata will be stale until user signs out/in
-  }
-
-  return NextResponse.json({
-    id: updated.id,
-    name: updated.name,
-    email: updated.email,
-    role: updated.role,
-    status: updated.status,
-  });
+  return NextResponse.json(updated);
 }
 
 // DELETE /api/admin/users/[userId] — remove a user (admin only)
@@ -80,12 +57,12 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { userId: string } }
 ) {
-  const appUser = await getAppUser();
-  if (!appUser || appUser.role !== "ADMIN") {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (params.userId === appUser.id) {
+  if (params.userId === session.user.id) {
     return NextResponse.json(
       { error: "You cannot delete your own account" },
       { status: 400 }

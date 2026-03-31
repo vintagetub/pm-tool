@@ -1,17 +1,20 @@
-import { stackServerApp } from "@/stack";
-import { getOrProvisionAppUser } from "@/lib/getAppUser";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { signOut } from "next-auth/react";
 import PendingClient from "./PendingClient";
 
 export default async function PendingPage() {
-  const stackUser = await stackServerApp.getUser();
-  if (!stackUser) redirect("/handler/sign-in");
+  const session = await getServerSession(authOptions);
 
-  // Provision the user if they haven't been provisioned yet
-  const appUser = await getOrProvisionAppUser(stackUser);
+  // If not logged in, redirect to login
+  if (!session) redirect("/login");
 
-  if (appUser.status === "APPROVED") redirect("/");
-  if (appUser.status === "REJECTED") redirect("/rejected");
+  // If approved or admin, redirect to home
+  if (session.user.status === "APPROVED") redirect("/");
 
-  return <PendingClient name={appUser.name} email={appUser.email} />;
+  // If rejected, redirect to rejected page
+  if (session.user.status === "REJECTED") redirect("/rejected");
+
+  return <PendingClient name={session.user.name} email={session.user.email} />;
 }
