@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import SessionProvider from "@/components/SessionProvider";
+import { StackProvider, StackTheme } from "@stackframe/stack";
+import { stackServerApp } from "@/stack";
 import NavBar from "@/components/NavBar";
 
 export const metadata: Metadata = {
@@ -16,10 +17,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-gray-50 text-gray-900 antialiased">
-        <SessionProvider>
-          <NavBar />
-          <main className="min-h-screen">{children}</main>
-        </SessionProvider>
+        <StackProvider app={stackServerApp}>
+          <StackTheme>
+            <NavBar />
+            <main className="min-h-screen">{children}</main>
+          </StackTheme>
+        </StackProvider>
       </body>
     </html>
   );

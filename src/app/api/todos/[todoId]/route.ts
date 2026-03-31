@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAppUser } from "@/lib/getAppUser";
 import { prisma } from "@/lib/prisma";
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: { todoId: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const appUser = await getAppUser();
+  if (!appUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const { title, assigneeName, dueDate, completed } = await req.json();
@@ -33,8 +32,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { todoId: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const appUser = await getAppUser();
+  if (!appUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     await prisma.todo.delete({ where: { id: params.todoId } });

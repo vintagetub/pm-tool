@@ -1,5 +1,5 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { stackServerApp } from "@/stack";
+import { getOrProvisionAppUser } from "@/lib/getAppUser";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
@@ -8,8 +8,10 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== "ADMIN") {
+  const stackUser = await stackServerApp.getUser({ or: "redirect" });
+  const appUser = await getOrProvisionAppUser(stackUser);
+
+  if (appUser.role !== "ADMIN") {
     redirect("/");
   }
 

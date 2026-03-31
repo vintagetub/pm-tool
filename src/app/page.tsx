@@ -1,14 +1,18 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { stackServerApp } from "@/stack";
+import { getOrProvisionAppUser } from "@/lib/getAppUser";
 import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import DashboardClient from "./DashboardClient";
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) return null;
+  const stackUser = await stackServerApp.getUser({ or: "redirect" });
+  const appUser = await getOrProvisionAppUser(stackUser);
 
-  const isAdminOrManager = ["ADMIN", "MANAGER"].includes(session.user.role);
+  if (appUser.status === "PENDING") redirect("/pending");
+  if (appUser.status === "REJECTED") redirect("/rejected");
+
+  const isAdminOrManager = ["ADMIN", "MANAGER"].includes(appUser.role);
 
   // Admins and Managers see all projects; Users see only their assigned projects
   const projects = await prisma.project.findMany({
@@ -16,7 +20,7 @@ export default async function DashboardPage() {
       ? undefined
       : {
           members: {
-            some: { userId: session.user.id },
+            some: { userId: appUser.id },
           },
         },
     orderBy: { createdAt: "desc" },

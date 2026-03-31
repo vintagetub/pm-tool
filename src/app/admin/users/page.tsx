@@ -1,5 +1,5 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { stackServerApp } from "@/stack";
+import { getOrProvisionAppUser } from "@/lib/getAppUser";
 import { prisma } from "@/lib/prisma";
 import AdminUsersClient from "./AdminUsersClient";
 
@@ -8,8 +8,8 @@ export default async function AdminUsersPage({
 }: {
   searchParams: { filter?: string };
 }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return null;
+  const stackUser = await stackServerApp.getUser({ or: "redirect" });
+  const appUser = await getOrProvisionAppUser(stackUser);
 
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "asc" },
@@ -26,7 +26,7 @@ export default async function AdminUsersPage({
   return (
     <AdminUsersClient
       users={users}
-      currentUserId={session.user.id}
+      currentUserId={appUser.id}
       initialFilter={searchParams.filter ?? "all"}
     />
   );

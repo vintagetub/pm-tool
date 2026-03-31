@@ -1,6 +1,6 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { useUser } from "@stackframe/stack";
 
 export default function RejectedClient({
   name,
@@ -9,6 +9,8 @@ export default function RejectedClient({
   name: string;
   email: string;
 }) {
+  const user = useUser();
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <div className="w-full max-w-md text-center">
@@ -28,7 +30,7 @@ export default function RejectedClient({
           </p>
         </div>
         <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => user?.signOut()}
           className="mt-4 text-sm text-gray-500 hover:text-gray-700 transition-colors"
         >
           Sign out
