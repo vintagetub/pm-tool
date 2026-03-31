@@ -8,7 +8,17 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session) return null;
 
+  const isAdminOrManager = ["ADMIN", "MANAGER"].includes(session.user.role);
+
+  // Admins and Managers see all projects; Users see only their assigned projects
   const projects = await prisma.project.findMany({
+    where: isAdminOrManager
+      ? undefined
+      : {
+          members: {
+            some: { userId: session.user.id },
+          },
+        },
     orderBy: { createdAt: "desc" },
     include: {
       _count: {
@@ -59,7 +69,7 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-gray-900">Projects</h1>
-        <DashboardClient />
+        {isAdminOrManager && <DashboardClient />}
       </div>
 
       {/* Project grid */}
@@ -67,7 +77,11 @@ export default async function DashboardPage() {
         <div className="text-center py-24 text-gray-400">
           <p className="text-4xl mb-3">📋</p>
           <p className="font-medium text-gray-600">No projects yet</p>
-          <p className="text-sm mt-1">Create your first project to get started.</p>
+          <p className="text-sm mt-1">
+            {isAdminOrManager
+              ? "Create your first project to get started."
+              : "You haven't been added to any projects yet."}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

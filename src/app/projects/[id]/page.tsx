@@ -9,6 +9,8 @@ export default async function ProjectPage({ params }: { params: { id: string } }
   const session = await getServerSession(authOptions);
   if (!session) return null;
 
+  const isAdminOrManager = ["ADMIN", "MANAGER"].includes(session.user.role);
+
   const project = await prisma.project.findUnique({
     where: { id: params.id },
     include: {
@@ -121,20 +123,40 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         </div>
       </div>
 
-      {/* Danger zone */}
-      <div className="border border-red-100 bg-red-50 rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-red-700 mb-1">Danger Zone</h3>
-        <p className="text-xs text-red-500 mb-3">
-          Deleting a project is permanent and will remove all messages, replies, and to-dos.
-        </p>
-        <DeleteButton
-          url={`/api/projects/${params.id}`}
-          redirectTo="/"
-          label="Delete this project"
-          confirmMessage={`Delete "${project.name}"? This will permanently remove all messages, replies, and to-dos.`}
-          className="bg-red-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
-        />
-      </div>
+      {/* Members management link (admin/manager only) */}
+      {isAdminOrManager && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">Project Members</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Control who has access to this project.</p>
+            </div>
+            <Link
+              href={`/projects/${params.id}/members`}
+              className="text-sm text-blue-600 font-medium hover:text-blue-800 transition-colors"
+            >
+              Manage →
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Danger zone (admin only) */}
+      {session.user.role === "ADMIN" && (
+        <div className="border border-red-100 bg-red-50 rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-red-700 mb-1">Danger Zone</h3>
+          <p className="text-xs text-red-500 mb-3">
+            Deleting a project is permanent and will remove all messages, replies, and to-dos.
+          </p>
+          <DeleteButton
+            url={`/api/projects/${params.id}`}
+            redirectTo="/"
+            label="Delete this project"
+            confirmMessage={`Delete "${project.name}"? This will permanently remove all messages, replies, and to-dos.`}
+            className="bg-red-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition-colors"
+          />
+        </div>
+      )}
     </div>
   );
 }

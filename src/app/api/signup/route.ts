@@ -21,13 +21,54 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const hashed = await bcrypt.hash(password, 12);
-    const user = await prisma.user.create({
-      data: { name, email, password: hashed },
-      select: { id: true, name: true, email: true },
+    // Extract the domain from the email
+    const domain = email.split("@")[1]?.toLowerCase();
+    if (!domain) {
+      return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+    }
+
+    // Check if this is the very first user — make them ADMIN + APPROVED automatically
+    const userCount = await prisma.user.count();
+    if (userCount === 0) {
+      const hashed = await bcrypt.hash(password, 12);
+      const user = await prisma.user.create({
+        data: { name, email, password: hashed, role: "ADMIN", status: "APPROVED" },
+        select: { id: true, name: true, email: true, role: true, status: true },
+      });
+      return NextResponse.json(
+        { ...user, message: "Account created. You are the first user and have been granted admin access." },
+        { status: 201 }
+      );
+    }
+
+    // Check domain against approved list
+    const approvedDomain = await prisma.approvedDomain.findUnique({
+      where: { domain },
     });
 
-    return NextResponse.json(user, { status: 201 });
+    if (!approvedDomain) {
+      // Domain not approved — auto-reject
+      const hashed = await bcrypt.hash(password, 12);
+      await prisma.user.create({
+        data: { name, email, password: hashed, role: "USER", status: "REJECTED" },
+      });
+      return NextResponse.json(
+        { error: "Your email domain is not authorized to access this application." },
+        { status: 403 }
+      );
+    }
+
+    // Domain is approved — create user as PENDING for admin review
+    const hashed = await bcrypt.hash(password, 12);
+    const user = await prisma.user.create({
+      data: { name, email, password: hashed, role: "USER", status: "PENDING" },
+      select: { id: true, name: true, email: true, status: true },
+    });
+
+    return NextResponse.json(
+      { ...user, message: "Account created. Your account is pending admin approval." },
+      { status: 201 }
+    );
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

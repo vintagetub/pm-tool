@@ -7,6 +7,11 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Only admins and managers can create projects
+  if (!["ADMIN", "MANAGER"].includes(session.user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const { name, description, color } = await req.json();
     if (!name || !color) {
@@ -19,6 +24,10 @@ export async function POST(req: NextRequest) {
         description: description || null,
         color,
         createdById: session.user.id,
+        // Add creator as a member automatically
+        members: {
+          create: { userId: session.user.id },
+        },
       },
     });
 
