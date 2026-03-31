@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -31,7 +32,20 @@ export default function SignupPage() {
         return;
       }
 
-      router.push("/login");
+      // Sign in automatically after account creation, then let middleware route them
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.ok) {
+        router.push("/");
+        router.refresh();
+      } else {
+        // Fallback: send to login
+        router.push("/login");
+      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -44,7 +58,7 @@ export default function SignupPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Create an account</h1>
-          <p className="text-gray-500 text-sm mt-1">Start managing projects today</p>
+          <p className="text-gray-500 text-sm mt-1">Request access to the workspace</p>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
@@ -73,7 +87,7 @@ export default function SignupPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="you@example.com"
+                placeholder="you@company.com"
               />
             </div>
 
@@ -103,7 +117,7 @@ export default function SignupPage() {
               disabled={loading}
               className="w-full bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              {loading ? "Creating account…" : "Create account"}
+              {loading ? "Creating account…" : "Request access"}
             </button>
           </form>
         </div>

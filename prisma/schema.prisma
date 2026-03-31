@@ -7,30 +7,66 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String    @id @default(cuid())
-  name      String
-  email     String    @unique
-  password  String
-  createdAt DateTime  @default(now())
+enum Role {
+  ADMIN
+  MANAGER
+  USER
+}
 
-  projects  Project[]
-  messages  Message[]
-  comments  Comment[]
-  todos     Todo[]
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id        String     @id @default(cuid())
+  name      String
+  email     String     @unique
+  password  String
+  role      Role       @default(USER)
+  status    UserStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+
+  projects       Project[]
+  messages       Message[]
+  comments       Comment[]
+  todos          Todo[]
+  projectMembers ProjectMember[]
+}
+
+model ApprovedDomain {
+  id        String   @id @default(cuid())
+  domain    String   @unique
+  createdAt DateTime @default(now())
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
 }
 
 model Project {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   description String?
   color       String
   createdById String
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
 
-  createdBy   User      @relation(fields: [createdById], references: [id])
-  messages    Message[]
-  todos       Todo[]
+  createdBy User            @relation(fields: [createdById], references: [id])
+  messages  Message[]
+  todos     Todo[]
+  members   ProjectMember[]
 
   @@index([createdById])
 }
@@ -44,9 +80,9 @@ model Message {
   createdAt DateTime  @default(now())
   editedAt  DateTime?
 
-  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  author    User      @relation(fields: [authorId], references: [id])
-  comments  Comment[]
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author   User      @relation(fields: [authorId], references: [id])
+  comments Comment[]
 
   @@index([projectId])
   @@index([authorId])
@@ -59,8 +95,8 @@ model Comment {
   authorId  String
   createdAt DateTime @default(now())
 
-  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id])
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  author  User    @relation(fields: [authorId], references: [id])
 
   @@index([messageId])
   @@index([authorId])
@@ -76,8 +112,8 @@ model Todo {
   createdById  String
   createdAt    DateTime  @default(now())
 
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdBy   User      @relation(fields: [createdById], references: [id])
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User    @relation(fields: [createdById], references: [id])
 
   @@index([projectId])
   @@index([createdById])
