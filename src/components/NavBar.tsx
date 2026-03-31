@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useUser } from "@stackframe/stack";
 import Link from "next/link";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -16,18 +16,20 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export default function NavBar() {
-  const { data: session } = useSession();
+  const user = useUser();
 
-  if (!session) return null;
+  if (!user) return null;
 
-  const initials = session.user.name
+  const meta = (user.clientMetadata ?? {}) as Record<string, string>;
+  const role = meta.role ?? "USER";
+  const displayName = user.displayName ?? user.primaryEmail ?? "User";
+
+  const initials = displayName
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
-
-  const role = session.user.role ?? "USER";
 
   return (
     <header className="border-b border-gray-200 bg-white sticky top-0 z-50">
@@ -52,12 +54,12 @@ export default function NavBar() {
           >
             {ROLE_LABELS[role] ?? role}
           </span>
-          <span className="text-sm text-gray-600 hidden sm:block">{session.user.name}</span>
+          <span className="text-sm text-gray-600 hidden sm:block">{displayName}</span>
           <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-semibold">
             {initials}
           </div>
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => user.signOut()}
             className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
           >
             Sign out

@@ -1,13 +1,16 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { stackServerApp } from "@/stack";
+import { getOrProvisionAppUser } from "@/lib/getAppUser";
 import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import TodoList from "@/components/TodoList";
 
 export default async function TodosPage({ params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) return null;
+  const stackUser = await stackServerApp.getUser({ or: "redirect" });
+  const appUser = await getOrProvisionAppUser(stackUser);
+
+  if (appUser.status === "PENDING") redirect("/pending");
+  if (appUser.status === "REJECTED") redirect("/rejected");
 
   const project = await prisma.project.findUnique({
     where: { id: params.id },
